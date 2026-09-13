@@ -1,0 +1,7 @@
+{
+  "name": "bookcollectionmanager",
+  "integrations": {
+    "capacitor": {}
+  },
+  "type": "vue-vite"
+}
