@@ -13,7 +13,7 @@ async function requireUid(): Promise<string> {
   return user.uid;
 }
 
-export type BookPayload = Omit<Book, 'id' | 'coverKey'> & { coverKey?: string | null };
+export type BookPayload = Omit<Book, 'id'>;
 
 export async function addBook(book: BookPayload): Promise<string> {
   const uid = await requireUid();

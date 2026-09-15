@@ -5,5 +5,4 @@ export interface Book {
   category: string;
   publicationYear: number;
   available: boolean;
-  coverKey?: string;
 }

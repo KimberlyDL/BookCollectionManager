@@ -47,9 +47,6 @@
       <ion-list v-if="pagedBooks.length">
         <ion-item-sliding v-for="book in pagedBooks" :key="book.id">
           <ion-item button @click="editBook(book.id!)">
-            <ion-thumbnail v-if="book.coverKey" slot="start">
-              <img :src="coverUrl(book.coverKey)" alt="" />
-            </ion-thumbnail>
             <ion-label>
               <h2>{{ book.title }}</h2>
               <p>{{ book.author }} · {{ book.category }} · {{ book.publicationYear }}</p>
@@ -117,7 +114,6 @@ import {
   IonSelect,
   IonSelectOption,
   IonText,
-  IonThumbnail,
   IonTitle,
   IonToolbar,
   type InfiniteScrollCustomEvent,
@@ -125,7 +121,6 @@ import {
 import { add } from 'ionicons/icons';
 import { getCurrentUser, logout } from '../services/auth';
 import { deleteBook, subscribeBooks } from '../services/books';
-import { coverUrl, deleteCover } from '../services/covers';
 import type { Book } from '../types/Book';
 
 const PAGE_SIZE = 10;
@@ -192,11 +187,7 @@ function editBook(id: string) {
 }
 
 async function handleDelete(id: string) {
-  const book = books.value.find((b) => b.id === id);
   await deleteBook(id);
-  if (book?.coverKey) {
-    await deleteCover(book.coverKey).catch(() => undefined);
-  }
 }
 
 async function handleLogout() {

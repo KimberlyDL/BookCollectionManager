@@ -42,24 +42,6 @@
           <ion-toggle v-model="available" slot="end"></ion-toggle>
         </ion-item>
 
-        <ion-item lines="none">
-          <ion-label position="stacked">Cover Photo</ion-label>
-          <div class="cover-picker">
-            <img v-if="previewUrl" :src="previewUrl" class="cover-preview" alt="Cover preview" />
-            <input type="file" accept="image/*" @change="onFileChange" />
-            <ion-button
-              v-if="previewUrl"
-              fill="clear"
-              color="danger"
-              size="small"
-              type="button"
-              @click="handleRemoveCover"
-            >
-              Remove Cover
-            </ion-button>
-          </div>
-        </ion-item>
-
         <ion-text color="danger" v-if="errorMessage">
           <p class="ion-padding-start">{{ errorMessage }}</p>
         </ion-text>
@@ -73,7 +55,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import {
   IonBackButton,
@@ -93,7 +75,6 @@ import {
   IonToolbar,
 } from '@ionic/vue';
 import { addBook, getBook, updateBook } from '../services/books';
-import { coverUrl, deleteCover, uploadCover } from '../services/covers';
 
 const route = useRoute();
 const router = useRouter();
@@ -109,11 +90,6 @@ const available = ref(true);
 const errorMessage = ref('');
 const loading = ref(false);
 
-const existingCoverKey = ref<string | null>(null);
-const selectedFile = ref<File | null>(null);
-const previewUrl = ref<string | null>(null);
-let objectUrl: string | null = null;
-
 onMounted(async () => {
   if (!bookId.value) return;
   const book = await getBook(bookId.value);
@@ -126,35 +102,7 @@ onMounted(async () => {
   category.value = book.category;
   publicationYear.value = book.publicationYear;
   available.value = book.available;
-  if (book.coverKey) {
-    existingCoverKey.value = book.coverKey;
-    previewUrl.value = coverUrl(book.coverKey);
-  }
 });
-
-onBeforeUnmount(() => {
-  if (objectUrl) URL.revokeObjectURL(objectUrl);
-});
-
-function onFileChange(event: Event) {
-  const input = event.target as HTMLInputElement;
-  const file = input.files?.[0];
-  if (!file) return;
-
-  selectedFile.value = file;
-  if (objectUrl) URL.revokeObjectURL(objectUrl);
-  objectUrl = URL.createObjectURL(file);
-  previewUrl.value = objectUrl;
-}
-
-function handleRemoveCover() {
-  selectedFile.value = null;
-  if (objectUrl) {
-    URL.revokeObjectURL(objectUrl);
-    objectUrl = null;
-  }
-  previewUrl.value = null;
-}
 
 async function handleSave() {
   errorMessage.value = '';
@@ -166,25 +114,12 @@ async function handleSave() {
 
   loading.value = true;
   try {
-    let coverKey: string | null | undefined = existingCoverKey.value;
-
-    if (selectedFile.value) {
-      coverKey = await uploadCover(selectedFile.value);
-      if (existingCoverKey.value) {
-        await deleteCover(existingCoverKey.value).catch(() => undefined);
-      }
-    } else if (!previewUrl.value && existingCoverKey.value) {
-      await deleteCover(existingCoverKey.value).catch(() => undefined);
-      coverKey = null;
-    }
-
     const payload = {
       title: title.value,
       author: author.value,
       category: category.value,
       publicationYear: publicationYear.value,
       available: available.value,
-      coverKey,
     };
 
     if (isEditing.value && bookId.value) {
@@ -201,20 +136,3 @@ async function handleSave() {
   }
 }
 </script>
-
-<style scoped>
-.cover-picker {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  width: 100%;
-  padding-top: 8px;
-}
-
-.cover-preview {
-  max-width: 160px;
-  max-height: 160px;
-  object-fit: cover;
-  border-radius: 8px;
-}
-</style>

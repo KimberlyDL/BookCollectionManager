@@ -23,18 +23,21 @@ export function onAuthChange(callback: (user: User | null) => void) {
   return onAuthStateChanged(auth, callback);
 }
 
-let resolveAuthReady: (user: User | null) => void;
-const authReady = new Promise<User | null>((resolve) => {
+let currentUser: User | null = null;
+let hasResolved = false;
+let resolveAuthReady: () => void;
+const authReady = new Promise<void>((resolve) => {
   resolveAuthReady = resolve;
 });
-let hasResolved = false;
 onAuthStateChanged(auth, (user) => {
+  currentUser = user;
   if (!hasResolved) {
     hasResolved = true;
-    resolveAuthReady(user);
+    resolveAuthReady();
   }
 });
 
-export function getCurrentUser(): Promise<User | null> {
-  return authReady;
+export async function getCurrentUser(): Promise<User | null> {
+  if (!hasResolved) await authReady;
+  return currentUser;
 }
