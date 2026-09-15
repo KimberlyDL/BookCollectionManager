@@ -30,3 +30,9 @@ npm-debug.log*
 /platforms
 /plugins
 /www
+
+.env
+
+worker/node_modules
+worker/.wrangler
+worker/.dev.vars
