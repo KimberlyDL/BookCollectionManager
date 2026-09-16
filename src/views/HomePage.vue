@@ -77,6 +77,15 @@
       <div v-if="pagedBooks.length" class="app-list" :class="{ 'app-list--grid': viewMode === 'grid' }">
         <ion-item-sliding v-for="book in pagedBooks" :key="book.id">
           <div class="app-card app-book-card" @click="editBook(book.id!)">
+            <ion-button
+              class="app-book-delete"
+              fill="clear"
+              color="danger"
+              aria-label="Delete book"
+              @click.stop="confirmDelete(book)"
+            >
+              <ion-icon slot="icon-only" :icon="trashOutline"></ion-icon>
+            </ion-button>
             <div class="app-book-card-top">
               <h2 class="app-book-title">{{ book.title }}</h2>
               <ion-badge
@@ -89,7 +98,7 @@
             <p class="app-book-meta">{{ book.author }} · {{ book.category }} · {{ book.publicationYear }}</p>
           </div>
           <ion-item-options side="end">
-            <ion-item-option color="danger" @click="handleDelete(book.id!)">
+            <ion-item-option color="danger" @click="confirmDelete(book)">
               Delete
             </ion-item-option>
           </ion-item-options>
@@ -125,6 +134,7 @@
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import {
+  alertController,
   IonBadge,
   IonButton,
   IonButtons,
@@ -160,6 +170,7 @@ import {
   moonOutline,
   refreshOutline,
   sunnyOutline,
+  trashOutline,
 } from 'ionicons/icons';
 import { getCurrentUser, logout } from '../services/auth';
 import { deleteBook, subscribeBooks } from '../services/books';
@@ -279,7 +290,28 @@ function editBook(id: string) {
 }
 
 async function handleDelete(id: string) {
-  await deleteBook(id);
+  startLoading();
+  try {
+    await deleteBook(id);
+  } finally {
+    stopLoading();
+  }
+}
+
+async function confirmDelete(book: Book) {
+  const alert = await alertController.create({
+    header: 'Delete book',
+    message: `Delete "${book.title}"? This cannot be undone.`,
+    buttons: [
+      { text: 'Cancel', role: 'cancel' },
+      {
+        text: 'Delete',
+        role: 'destructive',
+        handler: () => handleDelete(book.id!),
+      },
+    ],
+  });
+  await alert.present();
 }
 
 async function handleLogout() {

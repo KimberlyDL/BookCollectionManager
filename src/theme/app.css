@@ -144,13 +144,23 @@ ion-header::after {
 }
 
 .app-book-card {
+  position: relative;
   margin: 0 0 12px;
-  padding: 14px 16px;
+  padding: 14px 44px 14px 16px;
   display: flex;
   flex-direction: column;
   gap: 6px;
   cursor: pointer;
   transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.app-book-delete {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  margin: 0;
+  --padding-start: 8px;
+  --padding-end: 8px;
 }
 
 .app-list--grid .app-book-card {
