@@ -1,14 +1,26 @@
 <template>
   <ion-page>
-    <ion-header :translucent="true">
-      <ion-toolbar>
-        <ion-title>My Books</ion-title>
+    <ion-header>
+      <ion-toolbar class="app-toolbar">
+        <ion-title>BookLook</ion-title>
         <ion-buttons slot="end">
-          <ion-button @click="handleLogout">Log Out</ion-button>
+          <ion-button
+            class="app-theme-toggle"
+            @click="toggleTheme"
+            :aria-label="theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'"
+          >
+            <ion-icon slot="icon-only" :icon="theme === 'dark' ? sunnyOutline : moonOutline"></ion-icon>
+          </ion-button>
+          <ion-button @click="handleRefresh" :disabled="refreshing" aria-label="Refresh">
+            <ion-icon slot="icon-only" :icon="refreshOutline" :class="{ spinning: refreshing }"></ion-icon>
+          </ion-button>
+          <ion-button @click="handleLogout" aria-label="Log Out">
+            <ion-icon slot="icon-only" :icon="logOutOutline"></ion-icon>
+          </ion-button>
         </ion-buttons>
       </ion-toolbar>
 
-      <ion-toolbar>
+      <ion-toolbar class="app-toolbar">
         <ion-searchbar
           v-model="searchTerm"
           placeholder="Search title or author"
@@ -16,7 +28,7 @@
         ></ion-searchbar>
       </ion-toolbar>
 
-      <ion-toolbar>
+      <ion-toolbar class="app-toolbar">
         <ion-segment v-model="statusFilter">
           <ion-segment-button value="all">
             <ion-label>All</ion-label>
@@ -30,7 +42,7 @@
         </ion-segment>
       </ion-toolbar>
 
-      <ion-toolbar v-if="categories.length">
+      <ion-toolbar v-if="categories.length" class="app-toolbar app-category-toolbar">
         <ion-item lines="none">
           <ion-label>Category</ion-label>
           <ion-select v-model="categoryFilter" interface="popover">
@@ -40,30 +52,52 @@
             </ion-select-option>
           </ion-select>
         </ion-item>
+        <ion-buttons slot="end" class="app-view-toggle">
+          <ion-button
+            :class="{ active: viewMode === 'list' }"
+            @click="viewMode = 'list'"
+            aria-label="List view"
+          >
+            <ion-icon slot="icon-only" :icon="listOutline"></ion-icon>
+          </ion-button>
+          <ion-button
+            :class="{ active: viewMode === 'grid' }"
+            @click="viewMode = 'grid'"
+            aria-label="Grid view"
+          >
+            <ion-icon slot="icon-only" :icon="gridOutline"></ion-icon>
+          </ion-button>
+        </ion-buttons>
       </ion-toolbar>
     </ion-header>
 
-    <ion-content :fullscreen="true">
-      <ion-list v-if="pagedBooks.length">
+    <ion-content class="app-content">
+      <AppRefresher :on-refresh="refetch" />
+
+      <div v-if="pagedBooks.length" class="app-list" :class="{ 'app-list--grid': viewMode === 'grid' }">
         <ion-item-sliding v-for="book in pagedBooks" :key="book.id">
-          <ion-item button @click="editBook(book.id!)">
-            <ion-label>
-              <h2>{{ book.title }}</h2>
-              <p>{{ book.author }} · {{ book.category }} · {{ book.publicationYear }}</p>
-            </ion-label>
-            <ion-badge :color="book.available ? 'success' : 'medium'" slot="end">
-              {{ book.available ? 'Available' : 'Borrowed' }}
-            </ion-badge>
-          </ion-item>
+          <div class="app-card app-book-card" @click="editBook(book.id!)">
+            <div class="app-book-card-top">
+              <h2 class="app-book-title">{{ book.title }}</h2>
+              <ion-badge
+                class="app-book-badge"
+                :color="book.available ? 'tertiary' : 'medium'"
+              >
+                {{ book.available ? 'Available' : 'Borrowed' }}
+              </ion-badge>
+            </div>
+            <p class="app-book-meta">{{ book.author }} · {{ book.category }} · {{ book.publicationYear }}</p>
+          </div>
           <ion-item-options side="end">
             <ion-item-option color="danger" @click="handleDelete(book.id!)">
               Delete
             </ion-item-option>
           </ion-item-options>
         </ion-item-sliding>
-      </ion-list>
+      </div>
 
-      <div v-else class="ion-padding ion-text-center">
+      <div v-else class="app-empty-state">
+        <ion-icon :icon="bookOutline"></ion-icon>
         <ion-text color="medium">
           <p v-if="books.length">No books match your search or filters.</p>
           <p v-else>No books yet. Tap + to add your first book.</p>
@@ -79,7 +113,7 @@
       </ion-infinite-scroll>
 
       <ion-fab vertical="bottom" horizontal="end" slot="fixed">
-        <ion-fab-button router-link="/book/new">
+        <ion-fab-button class="app-fab-button" router-link="/book/new">
           <ion-icon :icon="add"></ion-icon>
         </ion-fab-button>
       </ion-fab>
@@ -106,7 +140,6 @@ import {
   IonItemOptions,
   IonItemSliding,
   IonLabel,
-  IonList,
   IonPage,
   IonSearchbar,
   IonSegment,
@@ -118,12 +151,25 @@ import {
   IonToolbar,
   type InfiniteScrollCustomEvent,
 } from '@ionic/vue';
-import { add } from 'ionicons/icons';
+import {
+  add,
+  bookOutline,
+  gridOutline,
+  listOutline,
+  logOutOutline,
+  moonOutline,
+  refreshOutline,
+  sunnyOutline,
+} from 'ionicons/icons';
 import { getCurrentUser, logout } from '../services/auth';
 import { deleteBook, subscribeBooks } from '../services/books';
+import { startLoading, stopLoading } from '../composables/loadingBar';
+import { theme, toggleTheme } from '../composables/theme';
+import AppRefresher from '../components/AppRefresher.vue';
 import type { Book } from '../types/Book';
 
 const PAGE_SIZE = 10;
+const VIEW_MODE_KEY = 'booklook-view-mode';
 
 const router = useRouter();
 const books = ref<Book[]>([]);
@@ -131,19 +177,65 @@ const searchTerm = ref('');
 const statusFilter = ref<'all' | 'available' | 'borrowed'>('all');
 const categoryFilter = ref('all');
 const visibleCount = ref(PAGE_SIZE);
+const refreshing = ref(false);
+const viewMode = ref<'list' | 'grid'>(
+  (localStorage.getItem(VIEW_MODE_KEY) as 'list' | 'grid' | null) ?? 'list'
+);
+
+watch(viewMode, (mode) => {
+  localStorage.setItem(VIEW_MODE_KEY, mode);
+});
 let unsubscribe: (() => void) | null = null;
+let currentUid: string | null = null;
+
+function subscribe(uid: string, onFirstSnapshot?: () => void) {
+  let resolved = false;
+  return subscribeBooks(uid, (list) => {
+    books.value = list.sort((a, b) => a.title.localeCompare(b.title));
+    if (!resolved) {
+      resolved = true;
+      onFirstSnapshot?.();
+    }
+  });
+}
 
 onMounted(async () => {
+  startLoading();
   const user = await getCurrentUser();
-  if (!user) return;
-  unsubscribe = subscribeBooks(user.uid, (list) => {
-    books.value = list.sort((a, b) => a.title.localeCompare(b.title));
-  });
+  if (!user) {
+    stopLoading();
+    return;
+  }
+  currentUid = user.uid;
+  unsubscribe = subscribe(currentUid, stopLoading);
 });
 
 onBeforeUnmount(() => {
   unsubscribe?.();
 });
+
+function refetch(): Promise<void> {
+  return new Promise((resolve) => {
+    if (!currentUid) {
+      resolve();
+      return;
+    }
+    unsubscribe?.();
+    unsubscribe = subscribe(currentUid, resolve);
+  });
+}
+
+async function handleRefresh() {
+  if (refreshing.value) return;
+  refreshing.value = true;
+  startLoading();
+  try {
+    await refetch();
+  } finally {
+    refreshing.value = false;
+    stopLoading();
+  }
+}
 
 const categories = computed(() => {
   const unique = new Set(books.value.map((book) => book.category).filter(Boolean));
@@ -195,3 +287,18 @@ async function handleLogout() {
   router.replace('/login');
 }
 </script>
+
+<style scoped>
+ion-icon.spinning {
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+</style>

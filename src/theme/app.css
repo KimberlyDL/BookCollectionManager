@@ -1,0 +1,260 @@
+/* Shared app design system: soft pastel, minimal, card-based UI. */
+
+ion-content.app-content {
+  --background: var(--app-gradient-bg);
+}
+
+/* Solid header surface — a fully transparent header lets the
+   outgoing/incoming page bleed through during route transitions, which
+   reads as overlapping titles. A real (if soft) backdrop fixes that.
+   No backdrop-filter here: blurring an element inside a page that Ionic
+   animates with a transform is a known Chromium/WebView compositing
+   trap — the old page can be left stuck on screen until something
+   forces a repaint (e.g. a manual refresh). A plain, mostly-opaque
+   background gives the same soft look without that risk. */
+ion-header {
+  background: var(--app-card-bg);
+  box-shadow: none;
+  border-bottom: 1px solid var(--app-card-border);
+}
+
+ion-header::after {
+  display: none;
+}
+
+.app-toolbar {
+  --background: transparent;
+  --border-width: 0;
+  --box-shadow: none;
+}
+
+.app-toolbar ion-searchbar {
+  --background: var(--ion-color-light);
+  --border-radius: var(--app-radius-sm);
+  --box-shadow: none;
+  padding: 0 12px 8px;
+}
+
+.app-toolbar ion-item {
+  --background: transparent;
+}
+
+.app-category-toolbar ion-item {
+  --padding-start: 16px;
+  --inner-padding-end: 0;
+}
+
+.app-view-toggle {
+  flex-shrink: 0;
+  gap: 2px;
+}
+
+.app-view-toggle ion-button {
+  margin: 0;
+  --padding-start: 8px;
+  --padding-end: 8px;
+}
+
+.app-view-toggle ion-button.active {
+  --color: var(--ion-color-primary);
+  opacity: 1;
+}
+
+.app-view-toggle ion-button:not(.active) {
+  opacity: 0.5;
+}
+
+/* Card surfaces. Deliberately no backdrop-filter — see the ion-header
+   comment above; the same compositing trap applies to any blurred
+   element inside an animated page, and the book list can render many
+   of these cards at once. */
+.app-card {
+  background: var(--app-card-bg);
+  border: 1px solid var(--app-card-border);
+  border-radius: var(--app-radius);
+  box-shadow: var(--app-card-shadow);
+}
+
+.app-auth-wrapper {
+  min-height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 16px;
+}
+
+.app-auth-card {
+  width: 100%;
+  max-width: 420px;
+  padding: 32px 24px;
+}
+
+.app-form-card {
+  padding: 20px 16px;
+}
+
+.app-auth-title {
+  font-size: 24px;
+  font-weight: 700;
+  margin: 0 0 4px;
+  color: var(--ion-text-color);
+}
+
+.app-auth-subtitle {
+  margin: 0 0 24px;
+  color: var(--ion-color-medium);
+  font-size: 14px;
+}
+
+.app-field {
+  --background: var(--ion-color-light);
+  --border-radius: var(--app-radius-sm);
+  --padding-start: 14px;
+  --inner-padding-end: 14px;
+  margin-bottom: 14px;
+  border-radius: var(--app-radius-sm);
+}
+
+.app-link-button {
+  --color: var(--ion-color-primary);
+  font-weight: 500;
+}
+
+.app-primary-button {
+  --border-radius: var(--app-radius-sm);
+  --box-shadow: var(--app-card-shadow);
+  font-weight: 600;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+/* Home page */
+.app-list {
+  padding: 20px 12px 96px;
+}
+
+.app-list.app-list--grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 12px;
+}
+
+.app-list.app-list--grid ion-item-sliding {
+  --ion-item-sliding-content-transform: none;
+}
+
+.app-book-card {
+  margin: 0 0 12px;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.app-list--grid .app-book-card {
+  margin: 0;
+  height: 100%;
+}
+
+.app-book-card:active {
+  transform: scale(0.98);
+}
+
+.app-book-card-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.app-list--grid .app-book-card-top {
+  flex-direction: column-reverse;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+.app-book-title {
+  font-size: 16px;
+  font-weight: 700;
+  margin: 0;
+  color: var(--ion-text-color);
+}
+
+.app-book-meta {
+  margin: 0;
+  font-size: 13px;
+  color: var(--ion-color-medium);
+}
+
+.app-book-badge {
+  --padding-start: 10px;
+  --padding-end: 10px;
+  --padding-top: 5px;
+  --padding-bottom: 5px;
+  border-radius: 999px;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.app-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 64px 24px;
+  text-align: center;
+}
+
+.app-empty-state ion-icon {
+  font-size: 48px;
+  color: var(--ion-color-primary);
+  opacity: 0.6;
+}
+
+.app-fab-button {
+  --background: linear-gradient(135deg, var(--ion-color-primary), var(--ion-color-secondary));
+  --background-activated: linear-gradient(135deg, var(--ion-color-primary-shade), var(--ion-color-secondary-shade));
+  --box-shadow: 0 8px 20px rgba(138, 127, 224, 0.4);
+  --color: var(--ion-color-primary-contrast);
+}
+
+.app-theme-toggle ion-icon {
+  font-size: 20px;
+}
+
+/* PWA-style top loading bar */
+.app-loading-bar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  z-index: 99999;
+  overflow: hidden;
+  background: transparent;
+  pointer-events: none;
+}
+
+.app-loading-bar__inner {
+  height: 100%;
+  width: 40%;
+  background: var(--app-loading-bar-gradient);
+  border-radius: 0 4px 4px 0;
+  animation: app-loading-bar-slide 1.1s ease-in-out infinite;
+  box-shadow: 0 0 8px rgba(138, 127, 224, 0.6);
+}
+
+@keyframes app-loading-bar-slide {
+  0% {
+    transform: translateX(-100%);
+  }
+  50% {
+    transform: translateX(60%);
+  }
+  100% {
+    transform: translateX(250%);
+  }
+}

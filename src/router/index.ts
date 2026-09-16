@@ -5,6 +5,7 @@ import LoginPage from '../views/LoginPage.vue'
 import RegisterPage from '../views/RegisterPage.vue'
 import BookFormPage from '../views/BookFormPage.vue'
 import { getCurrentUser } from '../services/auth';
+import { endRouteNavigation, startRouteNavigation } from '../composables/loadingBar';
 
 const routes: Array<RouteRecordRaw> = [
   {
@@ -48,6 +49,7 @@ const router = createRouter({
 })
 
 router.beforeEach(async (to) => {
+  startRouteNavigation();
   const user = await getCurrentUser();
 
   if (to.meta.requiresAuth && !user) {
@@ -59,6 +61,14 @@ router.beforeEach(async (to) => {
   }
 
   return true;
+})
+
+router.afterEach(() => {
+  endRouteNavigation();
+})
+
+router.onError(() => {
+  endRouteNavigation();
 })
 
 export default router

@@ -1,43 +1,39 @@
 <template>
   <ion-page>
-    <ion-header :translucent="true">
-      <ion-toolbar>
+    <ion-header>
+      <ion-toolbar class="app-toolbar">
         <ion-buttons slot="start">
-          <ion-back-button default-href="/home"></ion-back-button>
+          <ion-back-button default-href="/home" text="Back"></ion-back-button>
         </ion-buttons>
         <ion-title>{{ isEditing ? 'Edit Book' : 'Add Book' }}</ion-title>
       </ion-toolbar>
-      <ion-toolbar>
-        <ion-breadcrumbs>
-          <ion-breadcrumb router-link="/home">My Books</ion-breadcrumb>
-          <ion-breadcrumb>{{ isEditing ? 'Edit Book' : 'Add Book' }}</ion-breadcrumb>
-        </ion-breadcrumbs>
-      </ion-toolbar>
     </ion-header>
 
-    <ion-content :fullscreen="true" class="ion-padding">
-      <form @submit.prevent="handleSave">
-        <ion-item>
+    <ion-content class="app-content ion-padding">
+      <AppRefresher :on-refresh="refreshBook" />
+
+      <form class="app-card app-form-card" @submit.prevent="handleSave">
+        <ion-item class="app-field" lines="none">
           <ion-label position="stacked">Title</ion-label>
           <ion-input v-model="title" required />
         </ion-item>
 
-        <ion-item>
+        <ion-item class="app-field" lines="none">
           <ion-label position="stacked">Author</ion-label>
           <ion-input v-model="author" required />
         </ion-item>
 
-        <ion-item>
+        <ion-item class="app-field" lines="none">
           <ion-label position="stacked">Category</ion-label>
           <ion-input v-model="category" required />
         </ion-item>
 
-        <ion-item>
+        <ion-item class="app-field" lines="none">
           <ion-label position="stacked">Publication Year</ion-label>
           <ion-input v-model.number="publicationYear" type="number" required />
         </ion-item>
 
-        <ion-item>
+        <ion-item class="app-field" lines="none">
           <ion-label>Available</ion-label>
           <ion-toggle v-model="available" slot="end"></ion-toggle>
         </ion-item>
@@ -46,7 +42,12 @@
           <p class="ion-padding-start">{{ errorMessage }}</p>
         </ion-text>
 
-        <ion-button expand="block" class="ion-margin-top" type="submit" :disabled="loading">
+        <ion-button
+          expand="block"
+          class="ion-margin-top app-primary-button"
+          type="submit"
+          :disabled="loading"
+        >
           {{ loading ? 'Saving…' : 'Save' }}
         </ion-button>
       </form>
@@ -59,8 +60,6 @@ import { computed, onMounted, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import {
   IonBackButton,
-  IonBreadcrumb,
-  IonBreadcrumbs,
   IonButton,
   IonButtons,
   IonContent,
@@ -75,6 +74,8 @@ import {
   IonToolbar,
 } from '@ionic/vue';
 import { addBook, getBook, updateBook } from '../services/books';
+import { withLoading } from '../composables/loadingBar';
+import AppRefresher from '../components/AppRefresher.vue';
 
 const route = useRoute();
 const router = useRouter();
@@ -90,9 +91,9 @@ const available = ref(true);
 const errorMessage = ref('');
 const loading = ref(false);
 
-onMounted(async () => {
+async function loadBook() {
   if (!bookId.value) return;
-  const book = await getBook(bookId.value);
+  const book = await withLoading(() => getBook(bookId.value!));
   if (!book) {
     errorMessage.value = 'Book not found';
     return;
@@ -102,7 +103,22 @@ onMounted(async () => {
   category.value = book.category;
   publicationYear.value = book.publicationYear;
   available.value = book.available;
-});
+}
+
+async function refreshBook() {
+  errorMessage.value = '';
+  if (isEditing.value) {
+    await loadBook();
+  } else {
+    title.value = '';
+    author.value = '';
+    category.value = '';
+    publicationYear.value = null;
+    available.value = true;
+  }
+}
+
+onMounted(loadBook);
 
 async function handleSave() {
   errorMessage.value = '';
@@ -122,11 +138,13 @@ async function handleSave() {
       available: available.value,
     };
 
-    if (isEditing.value && bookId.value) {
-      await updateBook(bookId.value, payload);
-    } else {
-      await addBook(payload);
-    }
+    await withLoading(async () => {
+      if (isEditing.value && bookId.value) {
+        await updateBook(bookId.value, payload);
+      } else {
+        await addBook(payload);
+      }
+    });
 
     router.replace('/home');
   } catch (error) {
