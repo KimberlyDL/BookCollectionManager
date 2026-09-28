@@ -50,6 +50,26 @@
             </template>
           </p>
 
+          <div class="cipher-format">
+            <span class="cipher-label">Format</span>
+            <ion-segment v-model="format" class="cipher-format__toggle">
+              <ion-segment-button value="strict">
+                <ion-label>Strict</ion-label>
+              </ion-segment-button>
+              <ion-segment-button value="lenient">
+                <ion-label>Lenient</ion-label>
+              </ion-segment-button>
+            </ion-segment>
+          </div>
+          <p class="cipher-note">
+            <template v-if="format === 'strict'">
+              Classic textbook style: the message becomes CAPITAL letters only, and the ciphertext is written in 5-letter groups.
+            </template>
+            <template v-else>
+              Modern style: only letters change. Spaces, numbers and punctuation stay where they are.
+            </template>
+          </p>
+
           <ion-segment v-model="mode" class="cipher-mode">
             <ion-segment-button value="encrypt">
               <ion-icon :icon="lockClosedOutline"></ion-icon>
@@ -137,19 +157,51 @@
             </ion-button>
           </div>
 
+          <div v-if="format === 'strict' && inputText" class="cipher-preview">
+            <p class="cipher-preview__title">
+              <span>Ready to {{ mode }}</span>
+              <span>{{ prepared.text.length }} letter{{ prepared.text.length === 1 ? '' : 's' }}</span>
+            </p>
+            <p v-if="prepared.text" class="cipher-preview__text">
+              <span
+                v-for="(part, i) in prepared.parts"
+                :key="i"
+                :class="`cipher-preview__part--${part.kind}`"
+                :title="part.kind === 'letter' ? undefined : `from “${part.source}”`"
+              >{{ part.text }}</span>
+            </p>
+            <p v-else class="cipher-preview__empty">Nothing left to {{ mode }} — type some letters.</p>
+            <div v-if="strictChanges.length" class="cipher-preview__changes">
+              <span v-for="change in strictChanges" :key="change.label" class="cipher-guide__tag" :class="change.cls">
+                {{ change.label }}
+              </span>
+            </div>
+          </div>
+
           <div class="cipher-guide">
             <p class="cipher-guide__title">
               <ion-icon :icon="informationCircleOutline"></ion-icon>
               Accepted characters
             </p>
-            <ul>
+            <ul v-if="format === 'strict'">
+              <li><span class="cipher-guide__tag cipher-guide__tag--yes">A–Z a–z</span> {{ modeVerb }} as CAPITALS</li>
+              <li v-if="mode === 'encrypt'">
+                <span class="cipher-guide__tag cipher-guide__tag--digit">0–9</span> spelled out first (3 → THREE)
+              </li>
+              <li><span class="cipher-guide__tag cipher-guide__tag--accent">é ñ ü</span> accent removed (é → E)</li>
+              <li>
+                <span class="cipher-guide__tag">{{ mode === 'encrypt' ? '' : '0–9 ' }}␣ . , ! ? 🙂 …</span>
+                removed
+              </li>
+            </ul>
+            <ul v-else>
               <li><span class="cipher-guide__tag cipher-guide__tag--yes">A–Z a–z</span> transformed, capitals stay capitals</li>
               <li>
                 <span class="cipher-guide__tag">0–9 ␣ . , ! ? é 🙂 …</span>
                 kept exactly as typed
               </li>
             </ul>
-            <p v-if="inputText" class="cipher-guide__stats">
+            <p v-if="inputText && format === 'lenient'" class="cipher-guide__stats">
               <b>{{ stats.letters }}</b> letter{{ stats.letters === 1 ? '' : 's' }} will be {{ modeVerb }}
               · <b>{{ stats.kept }}</b> kept as-is
               <template v-if="stats.keptChars.length">
@@ -167,7 +219,7 @@
             <ion-icon slot="start" :icon="mode === 'encrypt' ? lockClosedOutline : lockOpenOutline"></ion-icon>
             {{ mode === 'encrypt' ? 'Encrypt' : 'Decrypt' }}
           </ion-button>
-          <p v-if="inputText && !stats.letters" class="cipher-error">
+          <p v-if="inputText && !letterCount" class="cipher-error">
             There are no letters A–Z to {{ mode }}.
           </p>
         </section>
@@ -293,8 +345,10 @@ import { Haptics, ImpactStyle } from '@capacitor/haptics';
 import {
   ALPHABET,
   analyzeText,
+  prepareStrictInput,
   runCipher,
   validateKey,
+  type CipherFormat,
   type CipherMode,
   type CipherResult,
   type CipherType,
@@ -314,6 +368,7 @@ const MAX_INPUT = 2000;
 interface RunResult extends CipherResult {
   type: CipherType;
   mode: CipherMode;
+  format: CipherFormat;
   key: string;
   input: string;
 }
@@ -321,6 +376,7 @@ interface RunResult extends CipherResult {
 const view = ref<'workspace' | 'history'>('workspace');
 const cipherType = ref<CipherType>('caesar');
 const mode = ref<CipherMode>('encrypt');
+const format = ref<CipherFormat>('strict');
 const shift = ref(3);
 const keyword = ref('');
 const inputText = ref('');
@@ -332,28 +388,55 @@ const currentKey = computed(() => (cipherType.value === 'caesar' ? String(shift.
 const keyError = computed(() => validateKey(cipherType.value, currentKey.value));
 const keywordLetters = computed(() => keyword.value.toUpperCase().replace(/[^A-Z]/g, '').split(''));
 const stats = computed(() => analyzeText(inputText.value));
+const prepared = computed(() => prepareStrictInput(inputText.value, mode.value));
+const letterCount = computed(() => (format.value === 'strict' ? prepared.value.text.length : stats.value.letters));
 const modeVerb = computed(() => (mode.value === 'encrypt' ? 'encrypted' : 'decrypted'));
-const canRun = computed(() => !keyError.value && stats.value.letters > 0);
+const canRun = computed(() => !keyError.value && letterCount.value > 0);
+
+// Summary chips under the strict preview: what the filter changed.
+const strictChanges = computed(() => {
+  const p = prepared.value;
+  const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`;
+  const changes: { label: string; cls?: string }[] = [];
+  if (p.lowercase) changes.push({ label: `${plural(p.lowercase, 'letter')} capitalized` });
+  if (p.digits) changes.push({ label: `${plural(p.digits, 'digit')} spelled out`, cls: 'cipher-guide__tag--digit' });
+  if (p.accents) changes.push({ label: `${plural(p.accents, 'accent')} removed`, cls: 'cipher-guide__tag--accent' });
+  if (p.spacesRemoved) changes.push({ label: `${plural(p.spacesRemoved, 'space')} removed` });
+  if (p.otherRemoved.length) {
+    const unique = Array.from(new Set(p.otherRemoved));
+    const shown = unique.slice(0, 6).join(' ') + (unique.length > 6 ? ' …' : '');
+    changes.push({ label: `Removed ${shown}`, cls: 'cipher-guide__tag--removed' });
+  }
+  return changes;
+});
 
 const isStale = computed(() => {
   const r = result.value;
   if (!r) return false;
-  return r.type !== cipherType.value || r.mode !== mode.value || r.key !== currentKey.value || r.input !== inputText.value;
+  return (
+    r.type !== cipherType.value ||
+    r.mode !== mode.value ||
+    r.format !== format.value ||
+    r.key !== currentKey.value ||
+    r.input !== inputText.value
+  );
 });
 
 async function run() {
   if (!canRun.value) return;
-  const output = runCipher(cipherType.value, mode.value, inputText.value, currentKey.value);
+  const output = runCipher(cipherType.value, mode.value, inputText.value, currentKey.value, format.value);
   result.value = {
     ...output,
     type: cipherType.value,
     mode: mode.value,
+    format: format.value,
     key: currentKey.value,
     input: inputText.value,
   };
   addHistoryEntry({
     type: cipherType.value,
     mode: mode.value,
+    format: format.value,
     key: currentKey.value,
     input: inputText.value,
     output: output.output,
@@ -366,8 +449,9 @@ async function run() {
 
 function swap() {
   if (!result.value) return;
-  const { output, mode: lastMode, type, key } = result.value;
+  const { output, mode: lastMode, type, key, format: lastFormat } = result.value;
   cipherType.value = type;
+  format.value = lastFormat;
   applyKey(type, key);
   inputText.value = output;
   mode.value = lastMode === 'encrypt' ? 'decrypt' : 'encrypt';
@@ -380,8 +464,12 @@ function applyKey(type: CipherType, key: string) {
 }
 
 function fillExample() {
+  const caesarExample = 'Meet me at the library, 3 PM!';
   if (mode.value === 'encrypt') {
-    inputText.value = cipherType.value === 'caesar' ? 'Meet me at the library, 3 PM!' : 'Attack at dawn!';
+    inputText.value = cipherType.value === 'caesar' ? caesarExample : 'Attack at dawn!';
+  } else if (format.value === 'strict') {
+    inputText.value =
+      cipherType.value === 'caesar' ? runCipher('caesar', 'encrypt', caesarExample, 3, 'strict').output : 'LXFOP VEFRN HR';
   } else {
     inputText.value = cipherType.value === 'caesar' ? 'Phhw ph dw wkh oleudub, 3 SP!' : 'Lxfopv ef rnhr!';
   }
@@ -390,15 +478,18 @@ function fillExample() {
 }
 
 function openEntry(entry: CipherHistoryEntry) {
+  const entryFormat = entry.format ?? 'lenient';
   cipherType.value = entry.type;
   mode.value = entry.mode;
+  format.value = entryFormat;
   applyKey(entry.type, entry.key);
   inputText.value = entry.input;
   view.value = 'workspace';
   result.value = {
-    ...runCipher(entry.type, entry.mode, entry.input, entry.key),
+    ...runCipher(entry.type, entry.mode, entry.input, entry.key, entryFormat),
     type: entry.type,
     mode: entry.mode,
+    format: entryFormat,
     key: entry.key,
     input: entry.input,
   };
@@ -457,8 +548,9 @@ async function copy(text: string) {
   await toast.present();
 }
 
-function summarize(entry: { type: CipherType; key: string }): string {
-  return entry.type === 'caesar' ? `Caesar · shift ${entry.key}` : `Vigenère · key ${entry.key.toUpperCase()}`;
+function summarize(entry: { type: CipherType; key: string; format?: CipherFormat }): string {
+  const cipher = entry.type === 'caesar' ? `Caesar · shift ${entry.key}` : `Vigenère · key ${entry.key.toUpperCase()}`;
+  return `${cipher} · ${entry.format === 'strict' ? 'Strict' : 'Lenient'}`;
 }
 
 function formatTime(timestamp: number): string {
@@ -503,6 +595,71 @@ function formatTime(timestamp: number): string {
 
 .cipher-mode {
   margin-bottom: 16px;
+}
+
+.cipher-format {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 0 4px 6px;
+}
+
+.cipher-format__toggle {
+  flex: 1;
+}
+
+.cipher-format__toggle ion-segment-button {
+  min-height: 36px;
+  text-transform: none;
+}
+
+.cipher-preview {
+  margin-bottom: 12px;
+  padding: 12px 14px;
+  border: 1.5px dashed rgba(var(--ion-color-primary-rgb), 0.5);
+  border-radius: var(--app-radius-sm);
+}
+
+.cipher-preview__title {
+  display: flex;
+  justify-content: space-between;
+  margin: 0 0 6px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--ion-color-primary);
+}
+
+.cipher-preview__text {
+  margin: 0;
+  font-family: var(--app-mono-font);
+  font-size: 16px;
+  letter-spacing: 0.06em;
+  word-break: break-all;
+}
+
+.cipher-preview__part--digit {
+  border-radius: 4px;
+  background: rgba(var(--ion-color-warning-rgb), 0.35);
+}
+
+.cipher-preview__part--accent {
+  border-radius: 4px;
+  background: rgba(var(--ion-color-secondary-rgb), 0.3);
+}
+
+.cipher-preview__empty {
+  margin: 0;
+  font-size: 13px;
+  color: var(--ion-color-danger-shade);
+}
+
+.cipher-preview__changes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 10px;
 }
 
 .cipher-mode ion-segment-button {
@@ -628,6 +785,18 @@ function formatTime(timestamp: number): string {
   background: rgba(var(--ion-color-medium-rgb), 0.2);
   font-family: var(--app-mono-font);
   font-size: 12px;
+}
+
+.cipher-guide__tag--digit {
+  background: rgba(var(--ion-color-warning-rgb), 0.35);
+}
+
+.cipher-guide__tag--accent {
+  background: rgba(var(--ion-color-secondary-rgb), 0.3);
+}
+
+.cipher-guide__tag--removed {
+  background: rgba(var(--ion-color-danger-rgb), 0.2);
 }
 
 .cipher-guide__tag--yes {

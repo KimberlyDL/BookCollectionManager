@@ -1,5 +1,5 @@
 import { ref, watch } from 'vue';
-import type { CipherMode, CipherType } from '../services/cipher';
+import type { CipherFormat, CipherMode, CipherType } from '../services/cipher';
 
 // Cipher history lives only on this device (localStorage) — no account or
 // network needed, so the Cipher tab works offline and signed out.
@@ -9,6 +9,8 @@ export interface CipherHistoryEntry {
   createdAt: number;
   type: CipherType;
   mode: CipherMode;
+  /** Missing on entries saved before formats existed — those were lenient. */
+  format?: CipherFormat;
   key: string;
   input: string;
   output: string;
@@ -50,6 +52,7 @@ export function addHistoryEntry(entry: Omit<CipherHistoryEntry, 'id' | 'createdA
     latest &&
     latest.type === entry.type &&
     latest.mode === entry.mode &&
+    (latest.format ?? 'lenient') === (entry.format ?? 'lenient') &&
     latest.key === entry.key &&
     latest.input === entry.input;
   if (isDuplicate) return latest;

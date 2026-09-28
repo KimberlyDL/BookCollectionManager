@@ -1,12 +1,19 @@
-// Classical Caesar and Vigenère ciphers.
+// Classical Caesar and Vigenère ciphers, in two formats:
 //
-// Only the 26 English letters (A–Z, a–z) are transformed; letter case is
-// kept. Every other character (spaces, digits, punctuation, accented letters,
-// emoji…) passes through unchanged. For Vigenère the key only advances on
-// letters, so "HELLO WORLD" with key "KEY" pairs W with K, not with a space.
+// - strict (classical/textbook): the text is first reduced to UPPERCASE
+//   letters — accents are stripped (é → E), digits are spelled out when
+//   encrypting (3 → THREE), and spaces/punctuation are dropped. Ciphertext is
+//   written in 5-letter groups so word lengths stay hidden.
+// - lenient (modern tools): only A–Z/a–z are transformed and case is kept;
+//   every other character (spaces, digits, punctuation, emoji…) passes
+//   through unchanged.
+//
+// For Vigenère the key only advances on letters, so "HELLO WORLD" with key
+// "KEY" pairs W with K, not with a space.
 
 export type CipherType = 'caesar' | 'vigenere';
 export type CipherMode = 'encrypt' | 'decrypt';
+export type CipherFormat = 'strict' | 'lenient';
 
 export const ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
 
@@ -94,11 +101,15 @@ export function runCipher(
   type: CipherType,
   mode: CipherMode,
   text: string,
-  key: string | number
+  key: string | number,
+  format: CipherFormat = 'lenient'
 ): CipherResult {
   const error = validateKey(type, key);
   if (error) throw new Error(error);
-  return type === 'caesar' ? caesar(text, Number(key), mode) : vigenere(text, String(key), mode);
+  const source = format === 'strict' ? prepareStrictInput(text, mode).text : text;
+  const result = type === 'caesar' ? caesar(source, Number(key), mode) : vigenere(source, String(key), mode);
+  if (format === 'strict' && mode === 'encrypt') result.output = groupInFives(result.output);
+  return result;
 }
 
 function toResult(steps: CipherStep[]): CipherResult {
@@ -115,4 +126,67 @@ export function analyzeText(text: string): { letters: number; kept: number; kept
   const kept = chars.filter((c) => !isLetter(c));
   const visible = Array.from(new Set(kept.filter((c) => c.trim() !== '')));
   return { letters: chars.length - kept.length, kept: kept.length, keptChars: visible };
+}
+
+const DIGIT_WORDS = ['ZERO', 'ONE', 'TWO', 'THREE', 'FOUR', 'FIVE', 'SIX', 'SEVEN', 'EIGHT', 'NINE'];
+
+export interface PreparedPart {
+  text: string;
+  /** The original character this part came from. */
+  source: string;
+  kind: 'letter' | 'digit' | 'accent';
+}
+
+export interface PreparedInput {
+  /** Uppercase A–Z only — exactly what gets encrypted/decrypted. */
+  text: string;
+  parts: PreparedPart[];
+  lowercase: number;
+  digits: number;
+  accents: number;
+  spacesRemoved: number;
+  otherRemoved: string[];
+}
+
+/**
+ * Reduces text to the classical A–Z form. Digits are spelled out only when
+ * encrypting; in ciphertext they can't be meaningful, so they're dropped.
+ */
+export function prepareStrictInput(text: string, mode: CipherMode): PreparedInput {
+  const prepared: PreparedInput = {
+    text: '',
+    parts: [],
+    lowercase: 0,
+    digits: 0,
+    accents: 0,
+    spacesRemoved: 0,
+    otherRemoved: [],
+  };
+
+  for (const char of Array.from(text)) {
+    if (isLetter(char)) {
+      if (char !== char.toUpperCase()) prepared.lowercase += 1;
+      prepared.parts.push({ text: char.toUpperCase(), source: char, kind: 'letter' });
+      continue;
+    }
+    const base = char.normalize('NFD').replace(/[̀-ͯ]/g, '');
+    if (isLetter(base)) {
+      prepared.accents += 1;
+      prepared.parts.push({ text: base.toUpperCase(), source: char, kind: 'accent' });
+    } else if (/^[0-9]$/.test(char) && mode === 'encrypt') {
+      prepared.digits += 1;
+      prepared.parts.push({ text: DIGIT_WORDS[Number(char)], source: char, kind: 'digit' });
+    } else if (char.trim() === '') {
+      prepared.spacesRemoved += 1;
+    } else {
+      prepared.otherRemoved.push(char);
+    }
+  }
+
+  prepared.text = prepared.parts.map((p) => p.text).join('');
+  return prepared;
+}
+
+export function groupInFives(text: string): string {
+  return text.match(/.{1,5}/g)?.join(' ') ?? '';
 }

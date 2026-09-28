@@ -1,5 +1,13 @@
 import { describe, expect, test } from 'vitest';
-import { analyzeText, caesar, runCipher, validateKey, vigenere } from '@/services/cipher';
+import {
+  analyzeText,
+  caesar,
+  groupInFives,
+  prepareStrictInput,
+  runCipher,
+  validateKey,
+  vigenere,
+} from '@/services/cipher';
 
 describe('caesar', () => {
   test('encrypts with a shift of 3', () => {
@@ -57,5 +65,32 @@ describe('validation', () => {
 
   test('analyzeText counts letters and kept characters', () => {
     expect(analyzeText('Hi, you 2!')).toEqual({ letters: 5, kept: 5, keptChars: [',', '2', '!'] });
+  });
+});
+
+describe('strict format', () => {
+  test('uppercases, spells out digits, strips accents, drops the rest', () => {
+    const prepared = prepareStrictInput('Café at 3 PM!', 'encrypt');
+    expect(prepared.text).toBe('CAFEATTHREEPM');
+    expect(prepared).toMatchObject({ accents: 1, digits: 1, spacesRemoved: 3, otherRemoved: ['!'] });
+  });
+
+  test('drops digits instead of spelling them out when decrypting', () => {
+    expect(prepareStrictInput('PHHWP 3', 'decrypt').text).toBe('PHHWP');
+  });
+
+  test('encrypts into 5-letter groups and decrypts back to plain letters', () => {
+    const encrypted = runCipher('caesar', 'encrypt', 'Meet me at 3 PM!', 3, 'strict').output;
+    expect(encrypted).toBe('PHHWP HDWWK UHHSP');
+    expect(runCipher('caesar', 'decrypt', encrypted, 3, 'strict').output).toBe('MEETMEATTHREEPM');
+  });
+
+  test('vigenere textbook example in strict form', () => {
+    expect(runCipher('vigenere', 'encrypt', 'Attack at dawn!', 'lemon', 'strict').output).toBe('LXFOP VEFRN HR');
+  });
+
+  test('groupInFives', () => {
+    expect(groupInFives('ABCDEFGHIJK')).toBe('ABCDE FGHIJ K');
+    expect(groupInFives('')).toBe('');
   });
 });
