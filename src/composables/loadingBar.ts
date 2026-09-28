@@ -2,7 +2,7 @@ import { computed, ref } from 'vue';
 
 const activeCount = ref(0);
 
-// A route navigation that gets redirected (e.g. the initial "/" -> "/home"
+// A route navigation that gets redirected (e.g. the initial "/" -> "/tabs/books"
 // -> "/login" chain) fires the router's beforeEach guard once per hop but
 // only ever fires afterEach/onError once, for the final navigation. Counting
 // those with the same activeCount used by withLoading() would leak: more

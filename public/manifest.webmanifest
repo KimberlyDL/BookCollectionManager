@@ -1,0 +1,25 @@
+{
+  "name": "BookLook",
+  "short_name": "BookLook",
+  "description": "Manage your book collection and encrypt messages with Caesar and Vigenère ciphers.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f8f6fd",
+  "theme_color": "#8a7fe0",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "maskable" },
+    { "src": "favicon.png", "sizes": "64x64", "type": "image/png" }
+  ],
+  "shortcuts": [
+    {
+      "name": "Cipher",
+      "short_name": "Cipher",
+      "description": "Encrypt or decrypt a message",
+      "url": "./tabs/cipher",
+      "icons": [{ "src": "icon.svg", "sizes": "any", "type": "image/svg+xml" }]
+    }
+  ]
+}

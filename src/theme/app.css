@@ -235,6 +235,44 @@ ion-header::after {
   font-size: 20px;
 }
 
+/* Bottom tab bar — same soft surface as the header */
+.app-tab-bar {
+  --background: var(--app-card-bg);
+  --border: 1px solid var(--app-card-border);
+  --color: var(--ion-color-medium);
+  --color-selected: var(--ion-color-primary);
+}
+
+.app-tab-bar ion-tab-button {
+  --ripple-color: var(--ion-color-primary);
+  font-weight: 600;
+}
+
+.app-auth-divider {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 8px 0;
+  font-size: 12px;
+  color: var(--ion-color-medium);
+}
+
+.app-auth-divider::before,
+.app-auth-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: rgba(var(--ion-color-medium-rgb), 0.3);
+}
+
+ion-toast.app-toast {
+  --background: var(--ion-text-color);
+  --color: var(--ion-background-color);
+  --border-radius: var(--app-radius-sm);
+  --button-color: var(--app-toast-accent);
+  --box-shadow: var(--app-card-shadow);
+}
+
 /* PWA-style top loading bar */
 .app-loading-bar {
   position: fixed;

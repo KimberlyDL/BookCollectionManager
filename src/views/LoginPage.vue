@@ -51,6 +51,13 @@
           <ion-button expand="block" fill="clear" class="app-link-button" router-link="/register">
             Need an account? Register
           </ion-button>
+
+          <div class="app-auth-divider"><span>or</span></div>
+
+          <ion-button expand="block" fill="outline" class="app-primary-button" router-link="/tabs/cipher">
+            <ion-icon slot="start" :icon="keyOutline"></ion-icon>
+            Use Cipher without login
+          </ion-button>
         </div>
       </div>
     </ion-content>
@@ -74,7 +81,7 @@ import {
   IonTitle,
   IonToolbar,
 } from '@ionic/vue';
-import { moonOutline, sunnyOutline } from 'ionicons/icons';
+import { keyOutline, moonOutline, sunnyOutline } from 'ionicons/icons';
 import { login } from '../services/auth';
 import { withLoading } from '../composables/loadingBar';
 import { theme, toggleTheme } from '../composables/theme';
@@ -97,7 +104,7 @@ async function handleLogin() {
   loading.value = true;
   try {
     await withLoading(() => login(email.value, password.value));
-    router.replace('/home');
+    router.replace('/tabs/books');
   } catch (error) {
     errorMessage.value = error instanceof Error ? error.message : 'Login failed';
   } finally {

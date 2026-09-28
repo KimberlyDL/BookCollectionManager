@@ -1,6 +1,8 @@
 import { createRouter, createWebHistory } from '@ionic/vue-router';
 import { RouteRecordRaw } from 'vue-router';
+import TabsPage from '../views/TabsPage.vue'
 import HomePage from '../views/HomePage.vue'
+import CipherPage from '../views/CipherPage.vue'
 import LoginPage from '../views/LoginPage.vue'
 import RegisterPage from '../views/RegisterPage.vue'
 import BookFormPage from '../views/BookFormPage.vue'
@@ -10,7 +12,12 @@ import { endRouteNavigation, startRouteNavigation } from '../composables/loading
 const routes: Array<RouteRecordRaw> = [
   {
     path: '/',
-    redirect: '/home'
+    redirect: '/tabs/books'
+  },
+  {
+    // Old URL, kept so existing bookmarks/PWA shortcuts still land on the list.
+    path: '/home',
+    redirect: '/tabs/books'
   },
   {
     path: '/login',
@@ -23,10 +30,26 @@ const routes: Array<RouteRecordRaw> = [
     component: RegisterPage
   },
   {
-    path: '/home',
-    name: 'Home',
-    component: HomePage,
-    meta: { requiresAuth: true }
+    path: '/tabs/',
+    component: TabsPage,
+    children: [
+      {
+        path: '',
+        redirect: '/tabs/books'
+      },
+      {
+        path: 'books',
+        name: 'Home',
+        component: HomePage,
+        meta: { requiresAuth: true }
+      },
+      {
+        // Works signed out and offline — everything runs and is stored on-device.
+        path: 'cipher',
+        name: 'Cipher',
+        component: CipherPage
+      }
+    ]
   },
   {
     path: '/book/new',

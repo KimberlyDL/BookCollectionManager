@@ -110,7 +110,7 @@ async function handleRegister() {
   loading.value = true;
   try {
     await withLoading(() => register(email.value, password.value));
-    router.replace('/home');
+    router.replace('/tabs/books');
   } catch (error) {
     errorMessage.value = error instanceof Error ? error.message : 'Registration failed';
   } finally {

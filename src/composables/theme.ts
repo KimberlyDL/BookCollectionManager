@@ -15,6 +15,7 @@ function getStoredTheme(): ThemeMode | null {
 
 function applyTheme(mode: ThemeMode) {
   document.documentElement.setAttribute('data-theme', mode);
+  document.documentElement.classList.toggle('ion-palette-dark', mode === 'dark');
 }
 
 export const theme = ref<ThemeMode>(getStoredTheme() ?? (systemPrefersDark() ? 'dark' : 'light'));

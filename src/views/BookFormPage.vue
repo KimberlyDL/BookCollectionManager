@@ -3,7 +3,7 @@
     <ion-header>
       <ion-toolbar class="app-toolbar">
         <ion-buttons slot="start">
-          <ion-back-button default-href="/home" text="Back"></ion-back-button>
+          <ion-back-button default-href="/tabs/books" text="Back"></ion-back-button>
         </ion-buttons>
         <ion-title>{{ isEditing ? 'Edit Book' : 'Add Book' }}</ion-title>
       </ion-toolbar>
@@ -146,7 +146,7 @@ async function handleSave() {
       }
     });
 
-    router.replace('/home');
+    router.replace('/tabs/books');
   } catch (error) {
     errorMessage.value = error instanceof Error ? error.message : 'Save failed';
   } finally {

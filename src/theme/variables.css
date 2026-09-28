@@ -84,6 +84,8 @@
   --app-card-shadow: 0 8px 24px rgba(138, 127, 224, 0.16);
   --app-radius: 18px;
   --app-radius-sm: 12px;
+  --app-toast-accent: #cfc8ff;
+  --app-mono-font: ui-monospace, 'SFMono-Regular', 'Roboto Mono', Menlo, Consolas, monospace;
   --app-loading-bar-gradient: linear-gradient(
     90deg,
     var(--ion-color-primary),
@@ -166,6 +168,7 @@
     --app-card-bg: rgba(38, 33, 64, 0.82);
     --app-card-border: rgba(255, 255, 255, 0.1);
     --app-card-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+    --app-toast-accent: #5b4fc4;
   }
 }
 
@@ -242,4 +245,5 @@
   --app-card-bg: rgba(38, 33, 64, 0.82);
   --app-card-border: rgba(255, 255, 255, 0.1);
   --app-card-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+  --app-toast-accent: #5b4fc4;
 }

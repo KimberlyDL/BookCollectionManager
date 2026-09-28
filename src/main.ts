@@ -1,6 +1,7 @@
 import { createApp } from 'vue'
 import App from './App.vue'
 import router from './router';
+import { registerServiceWorker } from './registerServiceWorker';
 
 import { IonicVue } from '@ionic/vue';
 
@@ -30,8 +31,10 @@ import '@ionic/vue/css/display.css';
  */
 
 /* @import '@ionic/vue/css/palettes/dark.always.css'; */
-/* @import '@ionic/vue/css/palettes/dark.class.css'; */
-import '@ionic/vue/css/palettes/dark.system.css';
+/* Class-based (not system) so the in-app light/dark toggle can override the
+   OS setting — see src/composables/theme.ts. */
+import '@ionic/vue/css/palettes/dark.class.css';
+/* import '@ionic/vue/css/palettes/dark.system.css'; */
 
 /* Theme variables */
 import './theme/variables.css';
@@ -45,3 +48,5 @@ const app = createApp(App)
 router.isReady().then(() => {
   app.mount('#app');
 });
+
+registerServiceWorker();
